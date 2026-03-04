@@ -1,0 +1,2 @@
+# SignalR Hub Requirements
+websockets>=10.0
