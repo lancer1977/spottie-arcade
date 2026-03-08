@@ -1,5 +1,7 @@
 # Spottie ANSI Arcade
 
+[![Tests](https://github.com/lancer1977/spottie-arcade/actions/workflows/tests.yml/badge.svg)](https://github.com/lancer1977/spottie-arcade/actions/workflows/tests.yml)
+
 `cc-ansi-arcade` is a compact terminal project that runs three autonomous games with zero external UI framework dependencies.  
 Everything renders in ANSI text, with lightweight game loops and algorithmic AI decisions per frame.
 
