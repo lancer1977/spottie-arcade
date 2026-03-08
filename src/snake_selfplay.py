@@ -180,7 +180,8 @@ class SnakeGame:
         else:
             self.snake.pop()
 
-    def render(self) -> str:
+    def build_grid(self) -> list[list[str]]:
+        """Return the current board state as a 2D array of single-character strings."""
         grid = [[" " for _ in range(WIDTH)] for _ in range(HEIGHT)]
 
         for i, (x, y) in enumerate(self.snake):
@@ -189,6 +190,11 @@ class SnakeGame:
         if self.food != (-1, -1):
             fx, fy = self.food
             grid[fy][fx] = "*"
+
+        return grid
+
+    def render(self) -> str:
+        grid = self.build_grid()
 
         top = "+" + "-" * WIDTH + "+"
         lines = [top]

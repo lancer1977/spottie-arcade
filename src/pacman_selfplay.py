@@ -55,6 +55,15 @@ WIDTH = len(MAZE_RAW[0])
 TICK_SECONDS = 0.1125  # 25% slower (0.09 * 1.25)
 RESTART_DELAY_SECONDS = 1.3
 
+# Ghost mode scheduling.
+#
+# Notes:
+# - "frightened" mode is triggered by power pellets and overrides the base schedule.
+# - Base schedule alternates scatter/chase on a fixed tick cycle.
+SCATTER_TICKS = 30
+CHASE_TICKS = 60
+GHOST_MODE_CYCLE_TICKS = SCATTER_TICKS + CHASE_TICKS
+
 UP = (0, -1)
 DOWN = (0, 1)
 LEFT = (-1, 0)
@@ -189,6 +198,44 @@ class PacmanGame:
         # Avoid moving directly into ghost tiles while collecting.
         return self.bfs_next_step(self.pacman, pellet_goals, avoid=pacman_avoid)
 
+    def ghost_mode(self) -> str:
+        if self.frightened_ticks > 0:
+            return "frightened"
+
+        t = self.steps % GHOST_MODE_CYCLE_TICKS
+        return "scatter" if t < SCATTER_TICKS else "chase"
+
+    def _nearest_walkable_to(self, goal: tuple[int, int]) -> tuple[int, int]:
+        """Return a walkable tile near goal (including goal)."""
+        if self.is_walkable(goal):
+            return goal
+
+        q = deque([goal])
+        seen = {goal}
+        while q:
+            cur = q.popleft()
+            for d in DIRS:
+                nb = add(cur, d)
+                if nb in seen or not in_bounds(nb):
+                    continue
+                if self.is_walkable(nb):
+                    return nb
+                seen.add(nb)
+                q.append(nb)
+
+        # Fallback: should never happen, but keep it safe.
+        return self._first_walkable()
+
+    def ghost_scatter_goal(self, idx: int) -> tuple[int, int]:
+        # Classic Pac-Man-ish corners (approx). Ensure we return a walkable tile.
+        corners = [
+            (1, 1),
+            (WIDTH - 2, 1),
+            (1, HEIGHT - 2),
+            (WIDTH - 2, HEIGHT - 2),
+        ]
+        return self._nearest_walkable_to(corners[idx % len(corners)])
+
     def move_pacman(self) -> None:
         target_step = self.choose_pacman_target()
         if target_step is None:
@@ -216,11 +263,20 @@ class PacmanGame:
         if not options:
             return
 
-        if self.frightened_ticks > 0:
+        mode = self.ghost_mode()
+
+        if mode == "frightened":
             # Run away-ish: maximize Manhattan distance from Pac-Man.
             best = max(options, key=lambda p: abs(p[0] - self.pacman[0]) + abs(p[1] - self.pacman[1]))
             # Randomness so ghosts don't all lock step.
             nxt = best if random.random() < 0.75 else random.choice(options)
+        elif mode == "scatter":
+            goal = self.ghost_scatter_goal(idx)
+            step = self.bfs_next_step(g, {goal})
+            if step is not None and random.random() < 0.82:
+                nxt = step
+            else:
+                nxt = random.choice(options)
         else:
             # Chase Pac-Man using BFS with some randomness.
             step = self.bfs_next_step(g, {self.pacman})
