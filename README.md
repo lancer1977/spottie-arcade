@@ -60,6 +60,38 @@ Quit running games with `Ctrl+C`.
 - Python 3.10+ (uses standard library only).
 - Terminal with ANSI support (`\x1b[2J`, cursor hide/show sequences).
 
+## Testing
+
+The project includes a comprehensive test suite using pytest.
+
+### Running Tests
+
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run Snake game tests only
+python -m pytest tests/test_snake_game.py -v
+
+# Run with coverage
+python -m pytest --cov=src tests/ --cov-report=term-missing
+```
+
+### Test Structure
+
+- `tests/test_snake_game.py` - Snake game tests (initialization, movement, collision, score, BFS pathfinding)
+- `tests/test_pacman_game.py` - Pac-Man game tests (maze, ghosts, pellets, scoring)
+- `tests/test_digdug_game.py` - Dig Dug game tests (digging, enemies, pumping)
+- `tests/test_smoke.py` - Basic import smoke tests
+
+### Test Requirements
+
+```bash
+pip install pytest pytest-cov
+```
+
+Tests use mocking where needed to avoid requiring actual game display. All tests run without external dependencies.
+
 ## Documentation references
 
 Long-form notes, design decisions, and future improvements are documented in the vault:
