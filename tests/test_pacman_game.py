@@ -331,3 +331,227 @@ def test_pacman_won_state():
     assert game.won is False
     game.step()
     assert game.won is True
+
+
+# === NEW TESTS: render() method coverage ===
+
+def test_pacman_render_basic_output():
+    """render() should return a string representation of the game state."""
+    game = pacman_selfplay.PacmanGame()
+
+    output = game.render()
+
+    assert isinstance(output, str)
+    assert "Round:" in output
+    assert "Score:" in output
+    assert "Pellets:" in output
+    assert "Steps:" in output
+
+
+def test_pacman_render_shows_frightened_mode():
+    """render() should show frightened mode indicator when active."""
+    game = pacman_selfplay.PacmanGame()
+    game.frightened_ticks = 10
+
+    output = game.render()
+
+    assert "Frightened mode:" in output
+    assert "10" in output
+
+
+def test_pacman_render_shows_dead_state():
+    """render() should show death message when Pac-Man is caught."""
+    game = pacman_selfplay.PacmanGame()
+    game.alive = False
+
+    output = game.render()
+
+    assert "Pac-Man was caught" in output
+    assert "Restarting" in output
+
+
+def test_pacman_render_shows_won_state():
+    """render() should show win message when all pellets collected."""
+    game = pacman_selfplay.PacmanGame()
+    game.pellets.clear()
+    game.power_pellets.clear()
+    game.won = True
+
+    output = game.render()
+
+    assert "Board cleared" in output
+    assert "Restarting" in output
+
+
+def test_pacman_render_shows_ghosts():
+    """render() should display ghosts in the maze."""
+    game = pacman_selfplay.PacmanGame()
+
+    output = game.render()
+
+    # Ghosts should appear as 'G' (normal) or 'g' (frightened)
+    assert "G" in output or "g" in output
+
+
+def test_pacman_render_frightened_ghosts_display():
+    """render() should show ghosts as 'g' when frightened."""
+    game = pacman_selfplay.PacmanGame()
+    game.frightened_ticks = 10
+
+    output = game.render()
+
+    # In frightened mode, ghosts show as 'g'
+    assert "g" in output
+
+
+def test_pacman_render_shows_pellets():
+    """render() should display pellets in the maze."""
+    game = pacman_selfplay.PacmanGame()
+
+    output = game.render()
+
+    # Pellets should appear as '.'
+    assert "." in output
+
+
+def test_pacman_render_shows_power_pellets():
+    """render() should display power pellets in the maze."""
+    game = pacman_selfplay.PacmanGame()
+
+    output = game.render()
+
+    # Power pellets should appear as 'o'
+    assert "o" in output
+
+
+def test_pacman_render_shows_pacman():
+    """render() should display Pac-Man in the maze."""
+    game = pacman_selfplay.PacmanGame()
+
+    output = game.render()
+
+    # Pac-Man should appear as 'C'
+    assert "C" in output
+
+
+def test_pacman_render_round_counter():
+    """render() should show round counter."""
+    game = pacman_selfplay.PacmanGame()
+    game.round_id = 5
+
+    output = game.render()
+
+    assert "Round: 5" in output
+
+
+# === NEW TESTS: Edge cases for better coverage ===
+
+def test_pacman_choose_pacman_target_when_no_pellets():
+    """Pac-Man should handle case when no pellets remain."""
+    game = pacman_selfplay.PacmanGame()
+    game.pellets.clear()
+    game.power_pellets.clear()
+
+    # Should return None when no pellets remain
+    result = game.choose_pacman_target()
+    assert result is None or game.won
+
+
+def test_pacman_move_pacman_no_valid_options(monkeypatch):
+    """Pac-Man should handle case when no valid move options exist."""
+    game = pacman_selfplay.PacmanGame()
+
+    # Place pacman surrounded by walls (edge case)
+    # This tests the fallback logic in move_pacman
+    game.pacman = (pacman_selfplay.WIDTH // 2, pacman_selfplay.HEIGHT // 2)
+
+    # Just verify it doesn't crash
+    game.move_pacman()
+
+
+def test_pacman_bfs_returns_none_for_empty_goals():
+    """BFS should return None when goals set is empty."""
+    game = pacman_selfplay.PacmanGame()
+
+    result = game.bfs_next_step(game.pacman, set())
+    assert result is None
+
+
+def test_pacman_bfs_finds_goal_directly_adjacent():
+    """BFS should find goal when directly adjacent."""
+    game = pacman_selfplay.PacmanGame()
+
+    # Find a walkable position adjacent to pacman
+    neighbors = list(game.neighbors(game.pacman))
+    if neighbors:
+        target = neighbors[0]
+        result = game.bfs_next_step(game.pacman, {target})
+        assert result == target
+
+
+def test_pacman_first_walkable_fallback():
+    """_first_walkable should always return a valid position."""
+    game = pacman_selfplay.PacmanGame()
+
+    result = game._first_walkable()
+
+    assert result is not None
+    assert game.is_walkable(result)
+
+
+def test_pacman_nearest_walkable_to_already_walkable():
+    """_nearest_walkable_to should return goal if already walkable."""
+    game = pacman_selfplay.PacmanGame()
+
+    # Find a walkable position
+    walkable = game._first_walkable()
+    result = game._nearest_walkable_to(walkable)
+
+    assert result == walkable
+
+
+def test_pacman_nearest_walkable_to_unwalkable():
+    """_nearest_walkable_to should find nearest walkable when goal is wall."""
+    game = pacman_selfplay.PacmanGame()
+
+    # (0, 0) is always a wall in this maze
+    result = game._nearest_walkable_to((0, 0))
+
+    assert game.is_walkable(result)
+
+
+def test_pacman_step_stops_when_dead():
+    """step() should not process further when Pac-Man is dead."""
+    game = pacman_selfplay.PacmanGame()
+    game.alive = False
+
+    initial_steps = game.steps
+    game.step()
+
+    # Steps should not increment when dead
+    assert game.steps == initial_steps
+
+
+def test_pacman_resolve_collisions_no_overlap():
+    """resolve_collisions should do nothing if ghosts don't overlap pacman."""
+    game = pacman_selfplay.PacmanGame()
+    game.pacman = (5, 5)
+    game.ghosts = [(10, 10), (11, 11), (12, 12), (13, 13)]
+    game.frightened_ticks = 0
+
+    initial_score = game.score
+    game.resolve_collisions()
+
+    # Score unchanged, still alive
+    assert game.score == initial_score
+    assert game.alive is True
+
+
+def test_pacman_round_id_increments_on_reset():
+    """Each reset should increment round_id."""
+    game = pacman_selfplay.PacmanGame()
+    initial_round = game.round_id
+
+    game.reset()
+
+    assert game.round_id == initial_round + 1
