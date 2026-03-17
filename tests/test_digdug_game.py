@@ -254,16 +254,21 @@ def test_digdug_is_walkable():
     """is_walkable should return False for walls and rocks."""
     game = digdug_selfplay.DigDugGame()
 
-    # Wall positions
+    # Wall positions - always unwalkable
     assert game.is_walkable((0, 0)) is False  # Top-left wall
     assert game.is_walkable((0, 5)) is False  # Left wall
 
-    # Rock positions
-    game.rocks.add((5, 5))
+    # Rock positions - unwalkable when rocks present
+    game.rocks = {(5, 5)}
+    game.enemies = []
     assert game.is_walkable((5, 5)) is False
 
-    # Open position
+    # Open position in bounds - walkable
     assert game.is_walkable((10, 5)) is True
+
+    # Out of bounds - unwalkable
+    assert game.is_walkable((-1, 5)) is False
+    assert game.is_walkable((100, 5)) is False
 
 
 def test_digdug_bfs_next_step():
@@ -312,3 +317,69 @@ def test_digdug_render_victory():
     output = game.render()
 
     assert "popped" in output.lower() or "won" in output.lower() or "victory" in output.lower()
+
+
+def test_digdug_deterministic_with_seed():
+    """Game should produce deterministic results with same random seed."""
+    # Run twice with same seed, results should be identical
+    results = []
+    for _ in range(2):
+        random.seed(42)
+        game = digdug_selfplay.DigDugGame()
+        
+        # Store initial enemy positions
+        initial_enemies = list(game.enemies)
+        
+        # Run a few steps
+        for _ in range(5):
+            game.step()
+        
+        results.append({
+            'enemies': list(game.enemies),
+            'player': game.player,
+            'score': game.score,
+            'dirt_count': len(game.dirt),
+            'initial_enemies': initial_enemies
+        })
+    
+    # With same seed, both runs should produce identical results
+    assert results[0]['initial_enemies'] == results[1]['initial_enemies']
+    assert results[0]['enemies'] == results[1]['enemies']
+    assert results[0]['player'] == results[1]['player']
+    assert results[0]['score'] == results[1]['score']
+    assert results[0]['dirt_count'] == results[1]['dirt_count']
+
+
+def test_digdug_rock_collision():
+    """Player should not be able to walk through rocks."""
+    game = digdug_selfplay.DigDugGame()
+    
+    # Place a rock near player
+    game.rocks = {(10, 5)}
+    game.player = (9, 5)
+    game.enemies = []
+    game.dirt = set()
+    
+    # Player should not be able to move onto rock position
+    walkable = game.is_walkable((10, 5))
+    
+    assert walkable is False
+
+
+def test_digdug_multiple_enemies_independent_pump():
+    """Each enemy should have independent pump counter."""
+    game = digdug_selfplay.DigDugGame()
+    
+    # Set up multiple enemies in line of sight
+    game.rocks = set()
+    game.player = (5, 5)
+    game.facing = digdug_selfplay.RIGHT
+    game.enemies = [(7, 5), (8, 6)]
+    game.enemy_pump = {0: 0, 1: 0}
+    
+    # Pump first enemy
+    game.pump_if_possible()
+    
+    # Only first enemy should have pump counter incremented
+    assert game.enemy_pump[0] == 1
+    assert game.enemy_pump[1] == 0
