@@ -112,3 +112,9 @@ Long-form notes, design decisions, and future improvements are documented in the
 - Added structured launcher menu.
 - Added autonomous gameplay loops for three classic-inspired games.
 - Centralized documentation into repository README + vault notes.
+
+
+## 📖 Documentation
+Detailed documentation can be found in the following sections:
+- [Feature Index](./docs/features/README.md)
+- [Core Capabilities](./docs/features/core-capabilities.md)
